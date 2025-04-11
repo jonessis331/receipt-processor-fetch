@@ -4,6 +4,7 @@ import uuid
 import math 
 import datetime
 
+
 app = Flask(__name__)
 
 receipts = {}
@@ -12,17 +13,16 @@ receipts = {}
 def process_receipt():
     receipt = request.get_json()
     if not receipt:
-        return jsonify({'error': 'The receipt is invalid'}), 400
+        return jsonify({'error': 'The receipt is invalid1'}), 400
     
     required = ['retailer', 'purchaseDate', 'purchaseTime', 'items', 'total']
     for feild in required:
         if feild not in receipt:
-            return jsonify({'error': 'The receipt is invalid'}), 400
-    
-    item_fields = ['shortDescription', 'price']
-    for field in item_fields:
-        if field not in receipt['items']:
-            return jsonify({'error': 'The receipt is invalid'}), 400
+            return jsonify({'error': 'The receipt is invalid2'}), 400
+
+    for item in receipt['items']:
+        if 'shortDescription' not in item or 'price' not in item:
+            return jsonify({'error': 'The receipt is invalid3'}), 400
     
     id = str(uuid.uuid4())
     receipts[id] = receipt
@@ -46,7 +46,7 @@ def calculate_points(id):
 
     # One point for every alphanumeric character in the retailer name.
     for c in receipt['retailer']:
-        if c.isalpha:
+        if c.isalpha():
             points+=1 
 
     # 50 points if the total is a round dollar amount with no cents.
@@ -62,23 +62,26 @@ def calculate_points(id):
     points += (item_count // 2) * 5
     
     # If the trimmed length of the item description is a multiple of 3, multiply the price by 0.2 and round up to the nearest integer. The result is the number of points earned.
-    for item in receipt['item']:
+    for item in receipt['items']:
         if len(item['shortDescription']) % 3 == 0:
             price = float(item['price'])
             points += math.ceil(price * 0.2)
 
     # 6 points if the day in the purchase date is odd.
-   
-    date =  receipt['purchaseDate']
-    day = int(date.split("-")[2])
+    date_purchased =  receipt['purchaseDate']
+    day = int(date_purchased.split("-")[2])
     if day % 2 != 0:
         points+=6
 
     # 10 points if the time of purchase is after 2:00pm and before 4:00pm.
-    time_purchased = datetime.striptime(receipt['purchaseTime'], '%H:%M')
-    two = datetime.strptime('14:00', '%H:%M')
-    four = datetime.strptime('16:00', '%H:%M')
+    time_purchased = datetime.datetime.strptime(receipt['purchaseTime'], '%H:%M')
+    two = datetime.datetime.strptime('14:00', '%H:%M')
+    four = datetime.datetime.strptime('16:00', '%H:%M')
     if two.time() < time_purchased.time() < four.time():
         points += 10
         
     return points
+
+
+if __name__ == '__main__':
+	app.run(host='0.0.0.0', port=8080)
